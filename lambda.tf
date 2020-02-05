@@ -13,13 +13,13 @@ resource "aws_lambda_function" "lambda_find_instance" {
   source_code_hash = data.archive_file.lambda.output_base64sha256
   runtime          = "python3.7"
 
-  depends_on = [
-    "data.archive_file.lambda"
-  ]
-
   environment {
     variables = {
       sns_arn = "todo"
     }
   }
+
+  depends_on = [
+    "data.archive_file.lambda"
+  ]
 }
