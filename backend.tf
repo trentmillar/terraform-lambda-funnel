@@ -1,6 +1,6 @@
   
 terraform {
-  required_version = "= 0.12.12"
+  required_version = "= 0.12.13"
 
   backend "s3" { }
 }
