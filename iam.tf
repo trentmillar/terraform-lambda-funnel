@@ -37,6 +37,7 @@ resource "aws_iam_policy" "sns_lambda_policy" {
           {
       "Sid": "AWSConfigSNSPolicy20150201",
       "Action": [
+        "SNS:Publish",
         "SNS:ListTopics",
         "SNS:GetTopicAttributes",
         "SNS:CreateTopic",

@@ -20,7 +20,7 @@ def lambda_handler(event, context):
     print("sns -> " + os.environ.get("sns_arn"))
     print("event -> " + json.dumps(event, indent=2))
 
-    sns_subscription_arn = os.environ.get("sns_arn")
+    sns_topic_arn = os.environ.get("sns_arn")
     instance_id = event["detail"]["instance-id"]
 
     instance_details = json.dumps(EC2_CLIENT.describe_instances(InstanceIds = [instance_id]), indent=2, default=datetime_converter)
@@ -33,7 +33,7 @@ def lambda_handler(event, context):
     #print(json.dumps(SNS_CLIENT.list_topics(), indent=2))
     
     SNS_CLIENT.publish(
-        TargetArn=sns_subscription_arn,
+        TopicArn=sns_topic_arn,
         Subject=f"{instance_id} shutdown",
         Message=json.dumps({"default": instance_details}),
         MessageStructure="json",
