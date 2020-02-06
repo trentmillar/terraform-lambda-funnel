@@ -15,7 +15,7 @@ resource "aws_lambda_function" "lambda_find_instance" {
 
   environment {
     variables = {
-      sns_arn = "todo"
+      sns_arn = aws_cloudformation_stack.sns_topic.outputs.ARN
     }
   }
 
