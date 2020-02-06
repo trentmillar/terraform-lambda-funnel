@@ -58,12 +58,19 @@ data "aws_ami" "this" {
 }
 
 resource "aws_instance" "this" {
-  count = var.create_test_instance ? 1 : 0
+  count = var.create_test_instance ? 2 : 0
 
   instance_type          = "t2.micro"
   ami                    = data.aws_ami.this.id
-  subnet_id              = aws_subnet.this[count.index].id
-  vpc_security_group_ids = [aws_security_group.this[count.index].id]
+  subnet_id              = aws_subnet.this[0].id
+  vpc_security_group_ids = [aws_security_group.this[0].id]
+
+  ebs_block_device {
+    device_name           = "/dev/sdg"
+    volume_size           = 10
+    volume_type           = "standard"
+    delete_on_termination = "true"
+  }
 
   tags = {
     Name = "TEST"
