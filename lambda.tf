@@ -23,3 +23,17 @@ resource "aws_lambda_function" "lambda_find_instance" {
     "data.archive_file.lambda"
   ]
 }
+
+resource "aws_lambda_permission" "with_sns" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_find_instance.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_cloudformation_stack.sns_topic.outputs.ARN
+}
+
+resource "aws_sns_topic_subscription" "lambda" {
+  topic_arn = aws_cloudformation_stack.sns_topic.outputs.ARN
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.lambda_find_instance.arn
+}

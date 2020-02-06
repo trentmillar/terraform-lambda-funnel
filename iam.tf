@@ -26,3 +26,33 @@ resource "aws_iam_role_policy_attachment" "execute_ec2" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
 }
+
+resource "aws_iam_policy" "sns_lambda_policy" {
+  name = "sns-lambda-policy"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+          {
+      "Sid": "AWSConfigSNSPolicy20150201",
+      "Action": [
+        "SNS:ListTopics",
+        "SNS:GetTopicAttributes",
+        "SNS:CreateTopic",
+        "SNS:Subscribe",
+        "SNS:DeleteTopic",
+        "SNS:*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "sns_policy_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.sns_lambda_policy.arn
+}
