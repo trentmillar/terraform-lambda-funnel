@@ -32,35 +32,51 @@ resource "aws_cloudwatch_event_target" "instances_dropping_out_target" {
   batch_size       = 1
 } */
 
-/* locals {
-  EC2_DISK_SPACE_TEMPLATE = {
-    alarm_name                = "ec2-disk-space"
+locals {
+
+  # All server instance_id's
+  instance_00 = var.create_test_instance ? aws_instance.this[0].id : ""
+  instance_01 = var.create_test_instance ? aws_instance.this[1].id : ""
+
+  # Default dimensions
+  instance_dimensions = [
+    local.instance_00,
+    local.instance_01
+  ]
+
+}
+
+locals {
+  EC2_CPU_TEMPLATE = {
+    alarm_name                = "ec2-cpu-utilization"
     comparison_operator       = "LessThanOrEqualToThreshold"
-    evaluation_periods        = "2"
+    evaluation_periods        = "1"
     insufficient_data_actions = []
-    alarm_actions             = //[ aws_cloudformation_stack.sns_topic[0].outputs["ARN"] ]
-    threshold                 = "10"
+    alarm_actions             = [aws_sns_topic.sns_message_bus.arn]
+    threshold                 = "70"
     treat_missing_data        = "notBreaching"
-    datapoints_to_alarm       = 2
-    alarm_description         = "This metric monitors ec2 disk space"
+    datapoints_to_alarm       = 1
+    alarm_description         = "This metric monitors ec2 cpu utilization"
 
     metric_query = [
       {
         id          = "e1"
-        expression  = "MIN(METRICS())"
-        label       = "Monitors the minimum free disk space % from all m(n) metrics."
+        expression  = "MAX(METRICS())"
+        label       = "Monitors the maximum cpu usage from all m(n) metrics."
         return_data = "true"
       }
     ]
 
     metric = [
-      for i, d in local.instance_disk_dimensions : {
+      for i, id in local.instance_dimensions : {
         id          = format("m%s", i),
-        metric_name = "LogicalDisk % Free Space"
-        namespace   = "cw_agent"
+        metric_name = "CPUUtilization"
+        namespace   = "AWS/EC2"
         period      = "60"
         stat        = "Average"
-        dimensions  = merge(d, { "objectname" : "LogicalDisk" })
+        dimensions = {
+          InstanceId = id
+        }
       }
     ]
 
@@ -74,36 +90,36 @@ locals {
 
   cloudwatch_metric_alarms = []
 
-  ec2_disk_space_replacements_80 = {
-    alarm_name        = "ec2-disk-space-info-gte80"
+  ec2_cpu_replacements_80 = {
+    alarm_name        = "ec2-cpu-info-gte80"
     threshold         = "20"
-    alarm_description = "This metric monitors ec2 disk space (INFO - 80%)"
+    alarm_description = "This metric monitors ec2 cpu (INFO - 80%)"
   }
 
-  ec2_disk_space_replacements_85 = {
-    alarm_name        = "ec2-disk-space-warn-gte85"
+  ec2_cpu_replacements_85 = {
+    alarm_name        = "ec2-cpu-warn-gte85"
     threshold         = "15"
-    alarm_description = "This metric monitors ec2 disk space (WARINING - 85%)"
+    alarm_description = "This metric monitors ec2 cpu (WARINING - 85%)"
   }
 
-  ec2_disk_space_replacements_90 = {
-    alarm_name        = "ec2-disk-space-critical-gte90"
+  ec2_cpu_replacements_90 = {
+    alarm_name        = "ec2-cpu-critical-gte90"
     threshold         = "10"
-    alarm_description = "This metric monitors ec2 disk space (CRITICAL - 90%)"
+    alarm_description = "This metric monitors ec2 cpu (CRITICAL - 90%)"
   }
 
-  cloudwatch_metric_alarms_w_queries = [
-    merge(local.EC2_DISK_SPACE_TEMPLATE, local.ec2_disk_space_replacements_80),
-    merge(local.EC2_DISK_SPACE_TEMPLATE, local.ec2_disk_space_replacements_85),
-    merge(local.EC2_DISK_SPACE_TEMPLATE, local.ec2_disk_space_replacements_90),
-  ]
+  cloudwatch_metric_alarms_w_queries = [local.EC2_CPU_TEMPLATE]
+  /*[
+    merge(local.EC2_CPU_TEMPLATE, local.ec2_cpu_replacements_80),
+    merge(local.EC2_CPU_TEMPLATE, local.ec2_cpu_replacements_85),
+    merge(local.EC2_CPU_TEMPLATE, local.ec2_cpu_replacements_90),
+  ]*/
 
 }
-
 
 module "cloudwatch_disk_alarm" {
   source = "github.com/trentmillar/terraform-aws-cloudwatch-module?ref=dev"
 
   cloudwatch_metric_alarms           = local.cloudwatch_metric_alarms
   cloudwatch_metric_alarms_w_queries = local.cloudwatch_metric_alarms_w_queries
-} */
+}
