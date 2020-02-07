@@ -65,31 +65,31 @@ locals {
 }
 
 resource "aws_lambda_permission" "allow_sns" {
-  count = length(local.functions)
+  /* count = length(local.functions) */
 
   statement_id  = "AllowExecutionFromSNS"
   action        = "lambda:InvokeFunction"
-  function_name = local.functions[count.index]
+  function_name = aws_lambda_function.lambda_find_instance.function_name /* local.functions[count.index] */
   principal     = "sns.amazonaws.com"
   source_arn    = aws_cloudformation_stack.sns_topic.outputs.ARN
 }
 
 resource "aws_lambda_permission" "allow_sns_replay" {
-  count = length(local.functions)
+  /* count = length(local.functions) */
 
   statement_id  = "AllowExecutionFromSNSReplay"
   action        = "lambda:InvokeFunction"
-  function_name = local.functions[count.index]
+  function_name = aws_lambda_function.lambda_ec2_alarms.function_name /* local.functions[count.index] */
   principal     = "sns.amazonaws.com"
   source_arn    = aws_sns_topic.sns_message_bus.arn
 }
 
 resource "aws_sns_topic_subscription" "lambda" {
-  count = length(local.arns)
+  /* count = length(local.arns) */
 
   topic_arn = aws_cloudformation_stack.sns_topic.outputs.ARN
   protocol  = "lambda"
-  endpoint  = local.arns[count.index]
+  endpoint  = aws_lambda_function.lambda_find_instance.arn /* local.arns[count.index] */
 
   depends_on = [
     "aws_lambda_function.lambda_find_instance",

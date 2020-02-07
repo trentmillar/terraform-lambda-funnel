@@ -23,6 +23,6 @@ def lambda_handler(event, context):
     SNS_CLIENT.publish(
         TopicArn=os.environ.get("sns_arn"),
         Subject="Alarm",
-        Message="Alarm triggered",
+        Message=json.dumps({"default": ""}),
         MessageStructure="json",
     )
