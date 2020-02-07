@@ -54,7 +54,7 @@ locals {
     insufficient_data_actions = []
     alarm_actions             = [aws_sns_topic.sns_message_bus.arn]
     threshold                 = "70"
-    treat_missing_data        = "notBreaching"
+    treat_missing_data        = "ignore"
     datapoints_to_alarm       = 1
     alarm_description         = "This metric monitors ec2 cpu utilization"
 
