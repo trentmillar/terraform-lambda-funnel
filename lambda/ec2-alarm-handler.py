@@ -13,8 +13,13 @@ CW_CLIENT = boto3.client('cloudwatch')
 
 
 def datetime_converter(o):
-    if isinstance(o, datetime):
-        return o.isoformat()
+    try:
+        if isinstance(o, datetime) and hasattr(o, 'isoformat'):
+            return o.isoformat()
+        else:
+            return o
+    except Exception as e:
+        return o.strftime("%Y-%m-%dT%H:%M:%S.%f+0000")
         
         
 def parse_prefix(line, fmt):
@@ -26,7 +31,7 @@ def parse_prefix(line, fmt):
             t = datetime.datetime.strptime(line, fmt)
         else:
             raise
-    return t        
+    return t       
 
 
 def get_ec2_status(instance_id):
@@ -35,6 +40,13 @@ def get_ec2_status(instance_id):
 
 def get_message_details(message):
     detail = {
+        "state": "",
+        "description": "",
+        "metric_name": "",
+        "namespace": "",
+        "datetime": "",
+        "threshold": "",
+        "comparison": "",
         "ec2_instances": []
     }
     detail["state"] = message["NewStateValue"]
@@ -52,8 +64,8 @@ def get_message_details(message):
             
             instance_details = {
                 "ec2_instance_id": metric["MetricStat"]["Metric"]["Dimensions"][0]["value"],
-                "metric_end": end,
-                "metric_start": end - datetime.timedelta(minutes=10)
+                "metric_start": end - datetime.timedelta(minutes=10),
+                "metric_end": end
             }
             
             # fetch metrics
@@ -88,32 +100,6 @@ def get_message_details(message):
     return detail
 
 
-"""
-{
-  "Records": [
-    {
-      "EventSource": "aws:sns",
-      "EventVersion": "1.0",
-      "EventSubscriptionArn": "arn:aws:sns:us-west-2:1234567890:ssm-sns-email-stack-EmailSNSTopic-QWERTYUJHGFDS:12356789-b163-4dca-b18f-2a5f74625f41",
-      "Sns": {
-        "Type": "Notification",
-        "MessageId": "123456789-1e05-5541-8890-e752b2790571",
-        "TopicArn": "arn:aws:sns:us-west-2:12345678900:ssm-sns-email-stack-EmailSNSTopic-QWERTYU",
-        "Subject": "Alarm",
-        "Message": "",
-        "Timestamp": "2020-02-07T00:07:24.248Z",
-        "SignatureVersion": "1",
-        "Signature": "2ML4c71cJ8VGaVmkgy36WvEgrfhXL1BQ35Ik6vyodTT3CWu8pyRp2AXmbBPhX/Q8JMs8LOpqPkQjR5D6ElmRzhMsENJuqHvwMwwen1UOBQ2hsGxwwARSRR5nQvIRW/iCdRjRe7yahzr2qPN1Ds+ZAsqrCGkoHllMzRpfkh+m9tF4oFwurgLh35A7B45TAHVJSzQ4MTzfiVucinHgSOkdm2JSju9DsFsCoErRQwzl/cWhuM6ij0D0KI3ALb2bZ1Khjw==",
-        "SigningCertUrl": "https://sns.us-west-2.amazonaws.com/SimpleNotificationService-a86cb10b4e1f29c941702d737128f7b6.pem",
-        "UnsubscribeUrl": "https://sns.us-west-2.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-west-2:1234567890:ssm-sns-email-stack-EmailSNSTopic-QWERTYUI:1234567890-b163-4dca-b18f-2a5f74625f41",
-        "MessageAttributes": {}
-      }
-    }
-  ]
-}
-"""
-
-
 def lambda_handler(event, context):
     sns_records = event["Records"]
 
@@ -123,19 +109,28 @@ def lambda_handler(event, context):
     # Assume single record
     cw_message = json.loads(sns_records[0]["Sns"]["Message"])
     cw_details = get_message_details(cw_message)
-
-    instance_ids = []
+    
     for instance in cw_details["ec2_instances"]:
-        instance_ids.append(instance["ec2_instance_id"])
+        ec2_details = EC2_CLIENT.describe_instances(InstanceIds = [instance["ec2_instance_id"]])
+        ec2 = ec2_details["Reservations"][0]["Instances"][0]
+        
+        instance["ec2_details"] = {
+            "ami_id": ec2["ImageId"],
+            "instance_type": ec2["InstanceType"],
+            "state": ec2["State"]["Name"],
+            "launched": str(ec2["LaunchTime"]),
+            "private_ips": ec2["PrivateIpAddress"],
+            "subnet_id": ec2["SubnetId"],
+            "security_groups": ec2["SecurityGroups"],
+            "tags": ec2["Tags"]
+        }
     
-    #ec2_details = EC2_CLIENT.describe_instances(InstanceIds = instance_ids )
-    #json.dumps(cw_details, default=datetime_converter)
-    
-    print(cw_details)
+        
+    cw_details = json.dumps(cw_details, indent=2, default=datetime_converter)
     
     SNS_CLIENT.publish(
         TopicArn=os.environ.get("sns_arn"),
         Subject="Alarm",
-        Message=json.dumps({"default": None}),
+        Message=json.dumps({"default": cw_details}),
         MessageStructure="json",
     )

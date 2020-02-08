@@ -11,6 +11,7 @@ data "archive_file" "ec2_event_handler" {
   output_path = "${path.module}/ec2-event-handler.zip"
 }
 
+
 /* begin lambdas */
 resource "aws_lambda_function" "lambda_find_instance" {
   filename         = "${path.module}/ec2-event-handler.zip"
@@ -18,7 +19,7 @@ resource "aws_lambda_function" "lambda_find_instance" {
   role             = aws_iam_role.lambda_role.arn
   handler          = "ec2-event-handler.lambda_handler"
   source_code_hash = data.archive_file.ec2_event_handler.output_base64sha256
-  runtime          = "python3.7"
+  runtime          = "python3.8" // todo, tm, var out runtime
 
   environment {
     variables = {
@@ -37,7 +38,7 @@ resource "aws_lambda_function" "lambda_ec2_alarms" {
   role             = aws_iam_role.lambda_role.arn
   handler          = "ec2-alarm-handler.lambda_handler"
   source_code_hash = data.archive_file.ec2_alarm_handler.output_base64sha256
-  runtime          = "python3.7"
+  runtime          = "python3.8"
 
   environment {
     variables = {
